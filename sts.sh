@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Kill any previous instances
+pkill -f "python3 -m http.server"
+pkill -f "ngrok"
+
 # Detect local IP
 IP=$(ip -4 addr show enp3s0 | grep -oP '(?<=inet\s)\d+(\.\d+){3}')
 PORT=8080
@@ -33,7 +37,7 @@ sleep 2
 
 # Expose the server using ngrok
 ngrok http $PORT > /dev/null 2>&1 &
-sleep 5  # Wait for ngrok to set up
+sleep 3  # Reduce ngrok wait time
 
 # Get the public URL
 NGROK_URL=$(curl -s http://localhost:4040/api/tunnels | jq -r '.tunnels[0].public_url')
@@ -49,8 +53,8 @@ echo "Image available at: $IMAGE_URL"
 # Open Google Lens with the image
 xdg-open "https://lens.google.com/uploadbyurl?url=$IMAGE_URL"
 
-# Keep the server alive for 60 seconds, then clean up
-sleep 60
+# Clean up after 10 seconds
+sleep 10
 pkill -f "python3 -m http.server"
 pkill -f "ngrok"
 rm -rf "$TEMP_DIR"
