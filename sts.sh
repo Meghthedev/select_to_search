@@ -1,25 +1,56 @@
 #!/bin/bash
 
-# Temporary file to save the screenshot
-IMAGE_PATH="/tmp/screenshot_search.png"
+# Detect local IP
+IP=$(ip -4 addr show enp3s0 | grep -oP '(?<=inet\s)\d+(\.\d+){3}')
+PORT=8080
 
-# Capture a selected area and save it
+if [[ -z "$IP" ]]; then
+    echo "Failed to determine local IP address."
+    exit 1
+fi
+
+echo "Using Local IP: $IP"
+
+# Create a temp directory for hosting
+TEMP_DIR=$(mktemp -d)
+IMAGE_PATH="$TEMP_DIR/screenshot.png"
+
+# Capture the selected area and save it
 flameshot gui -r > "$IMAGE_PATH"
 
-# Ensure the image is saved
+# Ensure the image was saved
 if [[ ! -s "$IMAGE_PATH" ]]; then
     echo "Screenshot capture failed or was canceled."
     exit 1
 fi
 
-# Upload image to 0x0.st (anonymous upload)
-IMAGE_URL=$(curl -F "file=@$IMAGE_PATH" https://0x0.st)
+# Start a Python HTTP server in the background
+cd "$TEMP_DIR"
+python3 -m http.server $PORT > /dev/null 2>&1 &
 
-# Validate upload
-if [[ ! $IMAGE_URL =~ ^https?:// ]]; then
-    echo "Image upload failed."
+# Wait for the server to start
+sleep 2
+
+# Expose the server using ngrok
+ngrok http $PORT > /dev/null 2>&1 &
+sleep 5  # Wait for ngrok to set up
+
+# Get the public URL
+NGROK_URL=$(curl -s http://localhost:4040/api/tunnels | jq -r '.tunnels[0].public_url')
+
+if [[ -z "$NGROK_URL" || "$NGROK_URL" == "null" ]]; then
+    echo "Failed to get public URL from ngrok."
     exit 1
 fi
 
-# Open image in Google Lens
+IMAGE_URL="$NGROK_URL/screenshot.png"
+echo "Image available at: $IMAGE_URL"
+
+# Open Google Lens with the image
 xdg-open "https://lens.google.com/uploadbyurl?url=$IMAGE_URL"
+
+# Keep the server alive for 60 seconds, then clean up
+sleep 60
+pkill -f "python3 -m http.server"
+pkill -f "ngrok"
+rm -rf "$TEMP_DIR"
