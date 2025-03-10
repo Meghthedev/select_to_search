@@ -10,7 +10,8 @@ This script brings the **Circle to Search** experience from Android to Linux, al
 2. **Host the image locally** using a temporary web server.
 3. **Expose it via Ngrok** to generate a publicly accessible link.
 4. **Send the link to Google Lens** for searching.
-5. **Auto-cleanup**: The script **self-destructs** after 60 seconds, removing the temporary image and stopping all background processes.
+5. **Auto-cleanup**: The script **self-destructs** after 10 seconds, removing the temporary image and stopping all background processes.
+
 
 ### **Installation**
 #### **1. Install Dependencies**
